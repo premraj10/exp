@@ -1,0 +1,7 @@
+Ensure the correct use of HTTP methods (GET, POST, PUT, DELETE, etc.).
+Ensure proper use of HTTP status codes (e.g., 200 for success, 404 for not found, 400 for bad requests, 500 for server errors).
+Ensure the API provides meaningful error responses (e.g., JSON-formatted error messages) with appropriate status codes.
+Validation for input data (e.g., required fields, formats like email or phone numbers).
+Define how pagination works for endpoints that return lists of resources (e.g., use of page, size parameters).
+
+--Adhoc
