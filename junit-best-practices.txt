@@ -377,3 +377,136 @@ JUnit test package structure and naming conventions are important for ensuring y
 ---
 
 These practices and guidelines will help in writing well-structured, maintainable, and effective unit and integration tests for your Spring Boot application using JUnit and MockMvc.
+-------------------
+
+
+For controller tests, the general best practice is to separate **unit tests** and **integration tests**. Here's how to handle it:
+
+### **1. Should You Maintain Separate Packages for `WebMvcTest` (Integration Test Cases)?**
+
+Yes, it is generally a good practice to maintain separate packages for **unit tests** and **integration tests**. This makes it easier to distinguish between different types of tests, track their purpose, and configure them separately if needed.
+
+#### Example Package Structure:
+```
+src
+├── test
+│   ├── java
+│   │   └── com/yourcompany/projectname
+│   │       ├── controller
+│   │       │   ├── UserControllerUnitTest.java    // Unit tests
+│   │       │   ├── UserControllerIntegrationTest.java    // Integration tests (e.g., using MockMvc)
+```
+
+Here, the unit test cases and integration test cases for the controller are kept in separate files within the `controller` package, following the pattern of naming the test classes `UserControllerUnitTest` and `UserControllerIntegrationTest`.
+
+### **2. Do You Need to Write Normal JUnit Tests for Controller Classes if You Write `WebMvcTest` Cases?**
+
+Yes, it's recommended to write **both unit tests and integration tests** for controllers. They serve different purposes:
+
+- **Unit Tests for Controllers**:
+  - Unit tests focus on testing individual methods within the controller, usually by mocking the service layer or any other dependencies. 
+  - These tests ensure that the controller logic behaves as expected in isolation.
+
+- **Integration Tests with `MockMvc` (`@WebMvcTest`)**:
+  - Integration tests simulate actual HTTP requests and validate the response, status codes, and headers. 
+  - These tests ensure that the controller interacts properly with the HTTP layer, performs routing correctly, and returns expected results.
+
+### **Why Write Both Unit and Integration Tests for Controllers?**
+
+- **Unit Tests**:
+  - **Purpose**: To verify the internal logic of controller methods without external dependencies like the web layer or database.
+  - **Focus**: Method logic, handling of inputs/outputs, interaction with service layers, validation.
+  - **Fast Execution**: Since dependencies are mocked, these tests are fast and cover logic-specific edge cases.
+
+- **Integration Tests (WebMvcTest)**:
+  - **Purpose**: To verify that the entire web layer of the application works as expected, including request handling, status codes, and responses.
+  - **Focus**: HTTP-level concerns like routing, request validation, and response payloads.
+  - **Realistic Simulation**: These tests simulate real requests/responses as closely as possible without spinning up a full application context (unless you need a full-blown integration test with `@SpringBootTest`).
+
+### **Example: Unit Test for Controller**
+
+```java
+package com.yourcompany.projectname.controller;
+
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.yourcompany.projectname.service.UserService;
+import com.yourcompany.projectname.model.User;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
+
+@ExtendWith(MockitoExtension.class)
+public class UserControllerUnitTest {
+
+    @Mock
+    private UserService userService;
+
+    @InjectMocks
+    private UserController userController;
+
+    @Test
+    void getUserById_ValidId_ReturnsUser() {
+        User user = new User("John", "Doe");
+        when(userService.getUserById(1L)).thenReturn(user);
+
+        ResponseEntity<User> response = userController.getUserById(1L);
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(user, response.getBody());
+    }
+}
+```
+
+### **Example: Integration Test for Controller Using `@WebMvcTest`**
+
+```java
+package com.yourcompany.projectname.controller;
+
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+
+import com.yourcompany.projectname.service.UserService;
+import com.yourcompany.projectname.model.User;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+@WebMvcTest(UserController.class)
+public class UserControllerIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private UserService userService;
+
+    @Test
+    void getUserById_ValidId_ReturnsUser() throws Exception {
+        User user = new User("John", "Doe");
+        when(userService.getUserById(1L)).thenReturn(user);
+
+        mockMvc.perform(get("/users/1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.firstName").value("John"))
+            .andExpect(jsonPath("$.lastName").value("Doe"));
+    }
+}
+```
+
+### **Summary of Best Practices**
+
+- **Separate Packages**: Use separate packages for unit tests and integration tests. This will help differentiate the two types of tests and provide a clear structure.
+  
+- **Unit Tests for Controllers**: Write unit tests to test the controller's logic in isolation, typically by mocking the service or other dependencies.
+
+- **Integration Tests with `MockMvc`**: Use `@WebMvcTest` to write integration tests that verify the behavior of the entire web layer (HTTP layer) of the application.
+
+- **Naming Convention**: Name unit tests with `UnitTest` suffix (e.g., `UserControllerUnitTest`) and integration tests with `IntegrationTest` suffix (e.g., `UserControllerIntegrationTest`).
+
+- **Both Tests are Important**: Both unit tests and integration tests serve unique purposes and should be used together to ensure thorough testing of the controller layer.
